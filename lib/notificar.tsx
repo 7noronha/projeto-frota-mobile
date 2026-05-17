@@ -43,9 +43,11 @@ export function useNotificar(): {
   function mostrar(opts: MostrarOpcoes): void {
     const variante = opts.variante ?? 'info';
     const cor = CORES[variante];
+    // Erros precisam de mais tempo de leitura que sucesso/info.
+    const duracaoPadrao = variante === 'erro' ? 7000 : 5000;
     toast.show({
       placement: 'top',
-      duration: opts.duracao ?? 3500,
+      duration: opts.duracao ?? duracaoPadrao,
       render: ({ id }: { id: string }) => (
         <Toast
           nativeID={`toast-${id}`}
