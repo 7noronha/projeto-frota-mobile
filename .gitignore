@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# IP da rede muda por maquina — nao versionar o .env real
+/.env
