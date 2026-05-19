@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@/components/ui/box';
 import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
@@ -11,6 +11,7 @@ import { Heading } from '@/components/ui/heading';
 import { Input, InputField } from '@/components/ui/input';
 import { Button, ButtonText, ButtonSpinner } from '@/components/ui/button';
 import { Pressable } from '@/components/ui/pressable';
+import { Spinner } from '@/components/ui/spinner';
 import {
   FormControl,
   FormControlLabel,
@@ -20,7 +21,7 @@ import {
 } from '@/components/ui/form-control';
 import { fetchApi, ErroApi } from '@/lib/api';
 import { useNotificar } from '@/lib/notificar';
-import type { CriarAbastecimento, TipoCombustivel } from '@/tipos';
+import type { CriarAbastecimento, TipoCombustivel, VeiculoResumo } from '@/tipos';
 
 const COMBUSTIVEIS: { valor: TipoCombustivel; rotulo: string }[] = [
   { valor: 'gasolina', rotulo: 'Gasolina' },
@@ -36,12 +37,22 @@ function paraNumero(v: string): number {
 }
 
 export default function TelaAbastecimento() {
-  const { viagemId, placa } = useLocalSearchParams<{ viagemId: string; placa?: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
   const notificar = useNotificar();
 
+  const {
+    data: veiculos,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['veiculos-meus'],
+    queryFn: () => fetchApi<VeiculoResumo[]>('/veiculos/meus'),
+  });
+
+  const [veiculoId, setVeiculoId] = useState<string | null>(null);
   const [litros, setLitros] = useState('');
   const [precoLitro, setPrecoLitro] = useState('');
   const [valor, setValor] = useState('');
@@ -49,6 +60,10 @@ export default function TelaAbastecimento() {
   const [odometro, setOdometro] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [erro, setErro] = useState<string | null>(null);
+
+  // Seleciona automaticamente quando há só um veículo
+  const veiculoSelecionado =
+    veiculoId ?? (veiculos && veiculos.length === 1 ? veiculos[0].id : null);
 
   const totalCalculado = useMemo(() => {
     const l = paraNumero(litros);
@@ -59,15 +74,15 @@ export default function TelaAbastecimento() {
 
   const mutacao = useMutation({
     mutationFn: (corpo: CriarAbastecimento) =>
-      fetchApi(`/viagens/${viagemId}/despesas`, {
+      fetchApi(`/veiculos/${veiculoSelecionado}/despesas`, {
         method: 'POST',
         body: JSON.stringify(corpo),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['viagem', viagemId] });
+      queryClient.invalidateQueries({ queryKey: ['veiculos-meus'] });
       notificar.sucesso({
         titulo: 'Abastecimento registrado',
-        descricao: 'A despesa foi lançada na viagem.',
+        descricao: 'A despesa foi lançada no veículo.',
       });
       router.back();
     },
@@ -79,6 +94,7 @@ export default function TelaAbastecimento() {
   });
 
   function handleSalvar() {
+    if (!veiculoSelecionado) return setErro('Selecione o veículo');
     const l = paraNumero(litros);
     const p = paraNumero(precoLitro);
     const v = valor.trim() ? paraNumero(valor) : Number(totalCalculado);
@@ -104,23 +120,93 @@ export default function TelaAbastecimento() {
     });
   }
 
+  if (isLoading) {
+    return (
+      <Box style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
+        <Spinner size="large" color="#0066FF" />
+      </Box>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Box style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 24 }}>
+        <Text style={{ color: '#DC2626', textAlign: 'center', marginBottom: 16 }}>
+          Não foi possível carregar seus veículos.
+        </Text>
+        <Button onPress={() => refetch()} variant="outline" style={{ borderColor: '#0066FF', borderWidth: 1 }}>
+          <ButtonText style={{ color: '#0066FF' }}>Tentar novamente</ButtonText>
+        </Button>
+      </Box>
+    );
+  }
+
+  if (!veiculos || veiculos.length === 0) {
+    return (
+      <Box style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 24 }}>
+        <Text style={{ color: '#0F172A', fontWeight: '600', marginBottom: 4, textAlign: 'center' }}>
+          Nenhum veículo disponível
+        </Text>
+        <Text size="sm" style={{ color: '#64748B', textAlign: 'center' }}>
+          Você só pode lançar abastecimento em veículos das suas viagens.
+        </Text>
+      </Box>
+    );
+  }
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: '#F8FAFC' }}
       contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-      refreshControl={<RefreshControl refreshing={false} onRefresh={() => {}} />}
     >
       <VStack style={{ gap: 16, paddingHorizontal: 16, paddingVertical: 16 }}>
         <Box>
           <Heading size="lg" style={{ color: '#0F172A' }}>
             Novo abastecimento
           </Heading>
-          {placa ? (
-            <Text style={{ color: '#94A3B8', marginTop: 4 }}>Veículo {placa}</Text>
-          ) : null}
+          <Text style={{ color: '#94A3B8', marginTop: 4 }}>
+            Selecione o veículo e preencha os dados.
+          </Text>
         </Box>
 
-        <FormControl isInvalid={!!erro}>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText size="sm" style={{ color: '#334155' }}>
+              Veículo
+            </FormControlLabelText>
+          </FormControlLabel>
+          <VStack style={{ gap: 8 }}>
+            {veiculos.map((v) => {
+              const ativo = veiculoSelecionado === v.id;
+              return (
+                <Pressable
+                  key={v.id}
+                  onPress={() => {
+                    setVeiculoId(v.id);
+                    setErro(null);
+                  }}
+                  style={{
+                    backgroundColor: ativo ? '#0066FF' : '#FFFFFF',
+                    borderColor: ativo ? '#0066FF' : '#CBD5E1',
+                    borderWidth: 1,
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                  }}
+                >
+                  <Text style={{ color: ativo ? '#FFFFFF' : '#0F172A', fontWeight: '700' }}>
+                    {v.placa}
+                  </Text>
+                  <Text size="xs" style={{ color: ativo ? '#DBEAFE' : '#64748B' }}>
+                    {v.marca} {v.modelo}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </VStack>
+        </FormControl>
+
+        <FormControl>
           <FormControlLabel>
             <FormControlLabelText size="sm" style={{ color: '#334155' }}>
               Litros
@@ -130,8 +216,8 @@ export default function TelaAbastecimento() {
             <InputField
               keyboardType="decimal-pad"
               value={litros}
-              onChangeText={(v) => {
-                setLitros(v);
+              onChangeText={(t) => {
+                setLitros(t);
                 setErro(null);
               }}
               placeholder="Ex.: 42,137"
@@ -149,8 +235,8 @@ export default function TelaAbastecimento() {
             <InputField
               keyboardType="decimal-pad"
               value={precoLitro}
-              onChangeText={(v) => {
-                setPrecoLitro(v);
+              onChangeText={(t) => {
+                setPrecoLitro(t);
                 setErro(null);
               }}
               placeholder="Ex.: 6,829"
@@ -168,8 +254,8 @@ export default function TelaAbastecimento() {
             <InputField
               keyboardType="decimal-pad"
               value={valor}
-              onChangeText={(v) => {
-                setValor(v);
+              onChangeText={(t) => {
+                setValor(t);
                 setErro(null);
               }}
               placeholder={totalCalculado ?? 'Ex.: 287,50'}
@@ -229,8 +315,8 @@ export default function TelaAbastecimento() {
             <InputField
               keyboardType="numeric"
               value={odometro}
-              onChangeText={(v) => {
-                setOdometro(v);
+              onChangeText={(t) => {
+                setOdometro(t);
                 setErro(null);
               }}
               placeholder="Ex.: 152340"

@@ -102,6 +102,7 @@ const FILTROS_STATUS = [
 ];
 
 export default function TelaViagens() {
+  const router = useRouter();
   const [filtroStatus, setFiltroStatus] = useState<StatusViagem | undefined>();
 
   const params = new URLSearchParams({ tamanhoPagina: '50' });
@@ -263,6 +264,32 @@ export default function TelaViagens() {
           )}
         </ScrollView>
       )}
+
+      {/* FAB — lançar abastecimento (fora da viagem, por veículo) */}
+      <Pressable
+        onPress={() => router.push('/(motorista)/abastecimento')}
+        className="active:opacity-80"
+        accessibilityRole="button"
+        accessibilityLabel="Lançar abastecimento"
+        style={{
+          position: 'absolute',
+          right: 20,
+          bottom: 24,
+          backgroundColor: '#0066FF',
+          borderRadius: 9999,
+          paddingHorizontal: 20,
+          paddingVertical: 14,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 6,
+          elevation: 5,
+        }}
+      >
+        <Text size="sm" style={{ color: '#FFFFFF', fontWeight: '700' }}>
+          + Abastecimento
+        </Text>
+      </Pressable>
     </SafeAreaView>
   );
 }

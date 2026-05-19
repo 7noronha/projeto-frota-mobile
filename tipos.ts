@@ -87,6 +87,13 @@ export interface CriarAbastecimento {
   observacoes?: string;
 }
 
+export interface VeiculoResumo {
+  id: string;
+  placa: string;
+  marca: string;
+  modelo: string;
+}
+
 export interface AbastecimentoResposta {
   id: string;
   veiculoId: string;
