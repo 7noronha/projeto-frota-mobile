@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatarDataIso, formatarDataHoraIso } from '@/lib/datetime';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -263,6 +263,7 @@ function FormFinalizar({ id, odometroInicial }: { id: string; odometroInicial: n
 export default function TelaDetalheViagem() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const { data: viagem, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['viagem', id],
@@ -450,6 +451,23 @@ export default function TelaDetalheViagem() {
 
         {viagem.status === 'EM_ANDAMENTO' && viagem.odometroInicial != null && (
           <FormFinalizar id={viagem.id} odometroInicial={viagem.odometroInicial} />
+        )}
+
+        {(viagem.status === 'CRIADA' || viagem.status === 'EM_ANDAMENTO') && (
+          <Button
+            onPress={() =>
+              router.push({
+                pathname: '/(motorista)/abastecimento',
+                params: { viagemId: viagem.id, placa: viagem.veiculo.placa },
+              })
+            }
+            variant="outline"
+            style={{ borderColor: '#0066FF', borderWidth: 1, borderRadius: 8 }}
+          >
+            <ButtonText style={{ color: '#0066FF', fontWeight: '600' }}>
+              Adicionar abastecimento
+            </ButtonText>
+          </Button>
         )}
       </VStack>
     </ScrollView>

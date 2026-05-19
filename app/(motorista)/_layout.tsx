@@ -29,6 +29,7 @@ export default function LayoutMotorista() {
         }}
       />
       <Stack.Screen name="viagens/[id]" options={{ title: 'Detalhe da Viagem' }} />
+      <Stack.Screen name="abastecimento" options={{ title: 'Abastecimento' }} />
     </Stack>
   );
 }

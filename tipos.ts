@@ -73,3 +73,30 @@ export interface ViagemDetalhada extends ViagemResposta {
     odometroAtual: number;
   };
 }
+
+export type TipoCombustivel = 'gasolina' | 'etanol' | 'diesel' | 'gnv' | 'flex';
+
+export interface CriarAbastecimento {
+  valor: number;
+  litros: number;
+  precoLitro: number;
+  tipoCombustivel: TipoCombustivel;
+  odometro?: number;
+  data?: string;
+  descricao?: string;
+  observacoes?: string;
+}
+
+export interface AbastecimentoResposta {
+  id: string;
+  veiculoId: string;
+  tipo: string;
+  data: string;
+  valor: number;
+  litros: number;
+  precoLitro: number;
+  tipoCombustivel: string;
+  odometro: number | null;
+  descricao: string;
+  dataCriacao: string;
+}
