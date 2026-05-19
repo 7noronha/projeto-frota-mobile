@@ -8,10 +8,6 @@
     "scheme": "fleetops",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "androidStatusBar": {
-      "barStyle": "light-content",
-      "backgroundColor": "#0A2540"
-    },
     "androidNavigationBar": {
       "barStyle": "dark-content"
     },
