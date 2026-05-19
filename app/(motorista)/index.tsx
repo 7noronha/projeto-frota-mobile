@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { formatarDataIso } from '@/lib/datetime';
 import { Box } from '@/components/ui/box';
@@ -103,6 +103,7 @@ const FILTROS_STATUS = [
 
 export default function TelaViagens() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [filtroStatus, setFiltroStatus] = useState<StatusViagem | undefined>();
 
   const params = new URLSearchParams({ tamanhoPagina: '50' });
@@ -274,7 +275,7 @@ export default function TelaViagens() {
         style={{
           position: 'absolute',
           right: 20,
-          bottom: 24,
+          bottom: insets.bottom + 24,
           backgroundColor: '#0066FF',
           borderRadius: 9999,
           paddingHorizontal: 20,
