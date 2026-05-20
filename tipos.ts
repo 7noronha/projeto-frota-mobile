@@ -41,6 +41,11 @@ export interface ViagemResposta {
   id: string;
   origem: string;
   destino: string;
+  // GPS — coordenadas resolvidas no servidor (geocode da origem/destino)
+  origemLatitude: number | null;
+  origemLongitude: number | null;
+  destinoLatitude: number | null;
+  destinoLongitude: number | null;
   dataViagem: string;
   horaInicioPrevista: string;
   horaFimPrevista: string;

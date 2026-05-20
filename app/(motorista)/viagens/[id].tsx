@@ -23,6 +23,7 @@ import {
 import { fetchApi, ErroApi } from '@/lib/api';
 import { useNotificar } from '@/lib/notificar';
 import { DetalheViagemSkeleton } from '@/components/DetalheViagemSkeleton';
+import { MapaAcompanhamento } from '@/components/MapaAcompanhamento';
 import type { ViagemDetalhada, StatusViagem } from '@/tipos';
 
 const CONFIG_STATUS: Record<StatusViagem, { rotulo: string; cor: string; fundo: string }> = {
@@ -346,6 +347,18 @@ export default function TelaDetalheViagem() {
         </Box>
 
         <Divider />
+
+        {/* Mapa de acompanhamento — só mostra se há coordenadas; GPS do
+            motorista é ativado apenas em viagens EM_ANDAMENTO */}
+        {(viagem.origemLatitude != null || viagem.destinoLatitude != null) && (
+          <MapaAcompanhamento
+            origemLatitude={viagem.origemLatitude}
+            origemLongitude={viagem.origemLongitude}
+            destinoLatitude={viagem.destinoLatitude}
+            destinoLongitude={viagem.destinoLongitude}
+            rastrearMotorista={viagem.status === 'EM_ANDAMENTO'}
+          />
+        )}
 
         {/* Informações gerais */}
         <SecaoCard titulo="Detalhes">
