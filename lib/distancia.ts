@@ -1,5 +1,5 @@
 /**
- * Cálculos de distância e tempo estimado.
+ * Cálculos de distância e formatação de tempo decorrido.
  *
  * Distância em linha reta via Haversine — não é a distância real por
  * estradas, mas é suficiente como referência ("falta perto" vs "ainda
@@ -8,10 +8,6 @@
  */
 
 const RAIO_TERRA_KM = 6371;
-
-// Velocidade média estimada (km/h) — urbano médio brasileiro.
-// Calibrável depois com base em dados reais de viagens finalizadas.
-const VELOCIDADE_MEDIA_KM_H = 40;
 
 function paraRadianos(graus: number): number {
   return (graus * Math.PI) / 180;
@@ -36,19 +32,6 @@ export function distanciaKm(a: PontoGeo, b: PontoGeo): number {
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   return 2 * RAIO_TERRA_KM * Math.asin(Math.sqrt(h));
-}
-
-/**
- * Tempo estimado em minutos para percorrer uma distância (km) a uma
- * velocidade média (km/h). Se a velocidade não for informada, usa o
- * default urbano.
- */
-export function tempoEstimadoMinutos(
-  distanciaKmValor: number,
-  velocidadeKmH = VELOCIDADE_MEDIA_KM_H,
-): number {
-  if (velocidadeKmH <= 0) return 0;
-  return (distanciaKmValor / velocidadeKmH) * 60;
 }
 
 /**

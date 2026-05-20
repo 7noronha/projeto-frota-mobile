@@ -379,8 +379,7 @@ export default function TelaDetalheViagem() {
           />
         )}
 
-        {/* Distância e tempo estimado — só faz sentido em viagens EM_ANDAMENTO
-            quando temos posição atual e destino com coordenadas */}
+        {/* Distância até o destino + tempo decorrido da viagem em curso */}
         {gpsAtivo && (
           <InfoDistancia
             posicaoAtual={
@@ -388,16 +387,12 @@ export default function TelaDetalheViagem() {
                 ? { latitude: minhaPosicao.latitude, longitude: minhaPosicao.longitude }
                 : null
             }
-            origem={
-              viagem.origemLatitude != null && viagem.origemLongitude != null
-                ? { latitude: viagem.origemLatitude, longitude: viagem.origemLongitude }
-                : null
-            }
             destino={
               viagem.destinoLatitude != null && viagem.destinoLongitude != null
                 ? { latitude: viagem.destinoLatitude, longitude: viagem.destinoLongitude }
                 : null
             }
+            inicioReal={viagem.dataHoraInicioReal}
           />
         )}
 

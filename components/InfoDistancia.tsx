@@ -1,88 +1,86 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { MapPin, Navigation } from 'lucide-react-native';
+import { Clock, Navigation } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import {
   distanciaKm,
   formatarDistancia,
   formatarTempo,
-  tempoEstimadoMinutos,
   type PontoGeo,
 } from '@/lib/distancia';
 
 interface InfoDistanciaProps {
   posicaoAtual: PontoGeo | null;
-  origem: PontoGeo | null;
   destino: PontoGeo | null;
+  /** ISO 8601 do início real da viagem. */
+  inicioReal: string | null;
 }
 
 /**
- * Card compacto mostrando distância em linha reta até o destino e tempo
- * estimado (velocidade média 40 km/h). Também calcula uma barra de
- * progresso usando a distância total origem→destino como referência.
+ * Card compacto com:
+ *  - "Faltam X km" — distância em linha reta até o destino
+ *  - "Em viagem há Y" — tempo decorrido desde o início real
  *
- * Não renderiza nada se faltar posição atual ou destino — assim a tela
- * não fica poluída em viagens criadas (sem GPS ativo) ou finalizadas.
+ * Não persiste nada. Atualiza o tempo decorrido a cada 30s.
  */
-export function InfoDistancia({ posicaoAtual, origem, destino }: InfoDistanciaProps) {
-  const calculado = useMemo(() => {
-    if (!posicaoAtual || !destino) return null;
-    const restante = distanciaKm(posicaoAtual, destino);
-    const tempo = tempoEstimadoMinutos(restante);
-    const total = origem ? distanciaKm(origem, destino) : null;
-    const progresso =
-      total && total > 0
-        ? Math.min(Math.max(1 - restante / total, 0), 1)
-        : null;
-    return { restante, tempo, progresso };
-  }, [posicaoAtual, origem, destino]);
+export function InfoDistancia({ posicaoAtual, destino, inicioReal }: InfoDistanciaProps) {
+  const [agora, setAgora] = useState(() => Date.now());
 
-  if (!calculado) return null;
+  useEffect(() => {
+    if (!inicioReal) return;
+    const t = setInterval(() => setAgora(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, [inicioReal]);
+
+  const restanteKm = useMemo(() => {
+    if (!posicaoAtual || !destino) return null;
+    return distanciaKm(posicaoAtual, destino);
+  }, [posicaoAtual, destino]);
+
+  const decorridoMin = useMemo(() => {
+    if (!inicioReal) return null;
+    const inicioMs = new Date(inicioReal).getTime();
+    if (!Number.isFinite(inicioMs)) return null;
+    return Math.max((agora - inicioMs) / 60_000, 0);
+  }, [inicioReal, agora]);
+
+  if (restanteKm == null && decorridoMin == null) return null;
 
   return (
     <View style={styles.card}>
       <View style={styles.linha}>
-        <View style={styles.metrica}>
-          <Navigation size={18} color="#0066FF" />
-          <View>
-            <Text size="xs" style={styles.rotulo}>
-              Faltam
-            </Text>
-            <Text size="md" style={styles.valor}>
-              {formatarDistancia(calculado.restante)}
-            </Text>
+        {restanteKm != null && (
+          <View style={styles.metrica}>
+            <Navigation size={18} color="#0066FF" />
+            <View>
+              <Text size="xs" style={styles.rotulo}>
+                Faltam
+              </Text>
+              <Text size="md" style={styles.valor}>
+                {formatarDistancia(restanteKm)}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
-        <View style={styles.separador} />
+        {restanteKm != null && decorridoMin != null && (
+          <View style={styles.separador} />
+        )}
 
-        <View style={styles.metrica}>
-          <MapPin size={18} color="#0066FF" />
-          <View>
-            <Text size="xs" style={styles.rotulo}>
-              Tempo estimado
-            </Text>
-            <Text size="md" style={styles.valor}>
-              {formatarTempo(calculado.tempo)}
-            </Text>
+        {decorridoMin != null && (
+          <View style={styles.metrica}>
+            <Clock size={18} color="#0066FF" />
+            <View>
+              <Text size="xs" style={styles.rotulo}>
+                Em viagem há
+              </Text>
+              <Text size="md" style={styles.valor}>
+                {formatarTempo(decorridoMin)}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
       </View>
-
-      {calculado.progresso != null && (
-        <View style={styles.barraTrilha}>
-          <View
-            style={[
-              styles.barraPreenchida,
-              { width: `${Math.round(calculado.progresso * 100)}%` },
-            ]}
-          />
-        </View>
-      )}
-
-      <Text size="xs" style={styles.aviso}>
-        Distância em linha reta · tempo estimado a 40 km/h
-      </Text>
     </View>
   );
 }
@@ -94,7 +92,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    gap: 10,
   },
   linha: {
     flexDirection: 'row',
@@ -121,18 +118,5 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontWeight: '600',
     marginTop: 2,
-  },
-  barraTrilha: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: '#E2E8F0',
-    overflow: 'hidden',
-  },
-  barraPreenchida: {
-    height: '100%',
-    backgroundColor: '#0066FF',
-  },
-  aviso: {
-    color: '#94A3B8',
   },
 });
