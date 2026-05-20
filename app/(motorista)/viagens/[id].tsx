@@ -24,6 +24,8 @@ import { fetchApi, ErroApi } from '@/lib/api';
 import { useNotificar } from '@/lib/notificar';
 import { DetalheViagemSkeleton } from '@/components/DetalheViagemSkeleton';
 import { MapaAcompanhamento } from '@/components/MapaAcompanhamento';
+import { InfoDistancia } from '@/components/InfoDistancia';
+import { useLocalizacaoAtual } from '@/lib/useLocalizacaoAtual';
 import type { ViagemDetalhada, StatusViagem } from '@/tipos';
 
 const CONFIG_STATUS: Record<StatusViagem, { rotulo: string; cor: string; fundo: string }> = {
@@ -271,6 +273,13 @@ export default function TelaDetalheViagem() {
     enabled: !!id,
   });
 
+  // GPS do motorista — só ativo quando a viagem está em andamento.
+  // Em memória, nada persiste no servidor.
+  const gpsAtivo = viagem?.status === 'EM_ANDAMENTO';
+  const { coords: minhaPosicao, status: statusGps } = useLocalizacaoAtual({
+    ativo: gpsAtivo,
+  });
+
   if (isLoading) {
     return (
       <ScrollView
@@ -356,7 +365,39 @@ export default function TelaDetalheViagem() {
             origemLongitude={viagem.origemLongitude}
             destinoLatitude={viagem.destinoLatitude}
             destinoLongitude={viagem.destinoLongitude}
-            rastrearMotorista={viagem.status === 'EM_ANDAMENTO'}
+            posicaoMotorista={
+              minhaPosicao
+                ? {
+                    latitude: minhaPosicao.latitude,
+                    longitude: minhaPosicao.longitude,
+                    precisao: minhaPosicao.precisao,
+                  }
+                : null
+            }
+            statusGps={statusGps}
+            mostrarAvisoGps={gpsAtivo}
+          />
+        )}
+
+        {/* Distância e tempo estimado — só faz sentido em viagens EM_ANDAMENTO
+            quando temos posição atual e destino com coordenadas */}
+        {gpsAtivo && (
+          <InfoDistancia
+            posicaoAtual={
+              minhaPosicao
+                ? { latitude: minhaPosicao.latitude, longitude: minhaPosicao.longitude }
+                : null
+            }
+            origem={
+              viagem.origemLatitude != null && viagem.origemLongitude != null
+                ? { latitude: viagem.origemLatitude, longitude: viagem.origemLongitude }
+                : null
+            }
+            destino={
+              viagem.destinoLatitude != null && viagem.destinoLongitude != null
+                ? { latitude: viagem.destinoLatitude, longitude: viagem.destinoLongitude }
+                : null
+            }
           />
         )}
 

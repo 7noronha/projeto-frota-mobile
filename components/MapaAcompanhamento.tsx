@@ -2,18 +2,19 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
 import { Text } from '@/components/ui/text';
-import { useLocalizacaoAtual } from '@/lib/useLocalizacaoAtual';
+import type { StatusLocalizacao } from '@/lib/useLocalizacaoAtual';
 
 interface MapaAcompanhamentoProps {
   origemLatitude: number | null;
   origemLongitude: number | null;
   destinoLatitude: number | null;
   destinoLongitude: number | null;
-  /**
-   * Quando true, ativa o GPS e mostra a posição do motorista.
-   * Use só quando a viagem estiver EM_ANDAMENTO.
-   */
-  rastrearMotorista?: boolean;
+  /** Posição atual do motorista (hoisted) — null se GPS inativo/indisponível. */
+  posicaoMotorista: { latitude: number; longitude: number; precisao: number | null } | null;
+  /** Estado da permissão/GPS do motorista (para aviso visual). */
+  statusGps?: StatusLocalizacao;
+  /** Quando true, mostra o aviso amarelo se status != 'ok'. */
+  mostrarAvisoGps?: boolean;
   altura?: number;
 }
 
@@ -57,7 +58,9 @@ export function MapaAcompanhamento({
   origemLongitude,
   destinoLatitude,
   destinoLongitude,
-  rastrearMotorista = false,
+  posicaoMotorista,
+  statusGps,
+  mostrarAvisoGps = false,
   altura = 260,
 }: MapaAcompanhamentoProps) {
   const mapRef = useRef<MapView>(null);
@@ -77,7 +80,8 @@ export function MapaAcompanhamento({
     [destinoLatitude, destinoLongitude],
   );
 
-  const { coords: minha, status } = useLocalizacaoAtual({ ativo: rastrearMotorista });
+  const minha = posicaoMotorista;
+  const status = statusGps;
 
   const regiaoInicial = useMemo(() => {
     const pontos: Ponto[] = [];
@@ -140,7 +144,7 @@ export function MapaAcompanhamento({
         )}
       </MapView>
 
-      {rastrearMotorista && status !== 'ok' && (
+      {mostrarAvisoGps && status && status !== 'ok' && (
         <View style={styles.aviso}>
           <Text size="xs" style={styles.avisoTexto}>
             {status === 'sem-permissao'
