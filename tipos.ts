@@ -46,6 +46,12 @@ export interface ViagemResposta {
   origemLongitude: number | null;
   destinoLatitude: number | null;
   destinoLongitude: number | null;
+  // Cache da rota Mapbox Directions (geometria + distância real + duração)
+  rotaGeometria: unknown | null;
+  rotaDistanciaKm: number | null;
+  rotaDuracaoMin: number | null;
+  // Velocidade média histórica do motorista (km/h, 40 se sem amostras)
+  velocidadeMediaKmH: number | null;
   dataViagem: string;
   horaInicioPrevista: string;
   horaFimPrevista: string;

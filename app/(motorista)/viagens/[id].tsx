@@ -398,6 +398,8 @@ export default function TelaDetalheViagem() {
               : null
           }
           inicioReal={viagem.dataHoraInicioReal}
+          rotaDistanciaKm={viagem.rotaDistanciaKm}
+          velocidadeMediaKmH={viagem.velocidadeMediaKmH}
         />
 
         {/* Informações gerais */}

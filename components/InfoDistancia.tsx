@@ -16,6 +16,12 @@ interface InfoDistanciaProps {
   destino: PontoGeo | null;
   /** ISO 8601 do início real da viagem (para "em viagem há"). */
   inicioReal: string | null;
+  /** Distância real por estrada (km) vinda da rota Mapbox cacheada no banco.
+   * Quando presente, substitui Haversine no cálculo de ETA. */
+  rotaDistanciaKm?: number | null;
+  /** Velocidade média histórica do motorista (km/h). Quando presente,
+   * substitui o fallback de 40 km/h no cálculo de ETA. */
+  velocidadeMediaKmH?: number | null;
 }
 
 interface Metrica {
@@ -33,7 +39,14 @@ interface Metrica {
  *
  * Sem nenhum dos três, não renderiza nada.
  */
-export function InfoDistancia({ posicaoAtual, origem, destino, inicioReal }: InfoDistanciaProps) {
+export function InfoDistancia({
+  posicaoAtual,
+  origem,
+  destino,
+  inicioReal,
+  rotaDistanciaKm,
+  velocidadeMediaKmH,
+}: InfoDistanciaProps) {
   const [agora, setAgora] = useState(() => Date.now());
 
   useEffect(() => {
@@ -45,26 +58,41 @@ export function InfoDistancia({ posicaoAtual, origem, destino, inicioReal }: Inf
   const metricas = useMemo<Metrica[]>(() => {
     const itens: Metrica[] = [];
 
-    // 1. Distância planejada — base estática da viagem
+    // 1. Distância planejada — prioriza rota real por estrada; cai pra
+    // linha reta (Haversine) se não houver cache da rota
     if (origem && destino) {
+      const km = rotaDistanciaKm ?? distanciaKm(origem, destino);
       itens.push({
         rotulo: 'Distância planejada',
-        valor: formatarDistancia(distanciaKm(origem, destino)),
+        valor: formatarDistancia(km),
         Icone: MapPin,
       });
     }
 
     // 2. Distância restante — só quando motorista está dirigindo
     if (posicaoAtual && destino) {
+      const kmRestante = distanciaKm(posicaoAtual, destino);
       itens.push({
         rotulo: 'Faltam',
-        valor: formatarDistancia(distanciaKm(posicaoAtual, destino)),
+        valor: formatarDistancia(kmRestante),
         Icone: Navigation,
       });
+
+      // 2b. ETA — usa velocidade calibrada do motorista quando disponível
+      const velocidadeKmH = velocidadeMediaKmH ?? 40;
+      if (velocidadeKmH > 0) {
+        const minutos = (kmRestante / velocidadeKmH) * 60;
+        itens.push({
+          rotulo: 'Chega em',
+          valor: formatarTempo(minutos),
+          Icone: Clock,
+        });
+      }
     }
 
-    // 3. Tempo decorrido — só quando a viagem já começou
-    if (inicioReal) {
+    // 3. Tempo decorrido — só quando a viagem já começou E não temos ETA
+    // (pra não inflar a UI com 4 métricas)
+    if (inicioReal && !(posicaoAtual && destino)) {
       const inicioMs = new Date(inicioReal).getTime();
       if (Number.isFinite(inicioMs)) {
         itens.push({
@@ -76,7 +104,7 @@ export function InfoDistancia({ posicaoAtual, origem, destino, inicioReal }: Inf
     }
 
     return itens;
-  }, [origem, destino, posicaoAtual, inicioReal, agora]);
+  }, [origem, destino, posicaoAtual, inicioReal, agora, rotaDistanciaKm, velocidadeMediaKmH]);
 
   if (metricas.length === 0) {
     // Sem coords e sem inicioReal: card informativo discreto pra usuário
