@@ -5,8 +5,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Notifications from 'expo-notifications';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { ErroApi, registrarHandlerNaoAutenticado } from '@/lib/api';
+
+// Mostra notificação mesmo com app aberto (foreground)
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,6 +42,19 @@ export default function RootLayout() {
       queryClient.clear();
       router.replace('/login');
     });
+  }, [router]);
+
+  // Deep-link no tap da notificação — leva pra tela da viagem
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((resposta) => {
+      const dados = resposta.notification.request.content.data as
+        | { tela?: string; viagemId?: string }
+        | undefined;
+      if (dados?.tela === 'viagem' && dados.viagemId) {
+        router.push(`/(motorista)/viagens/${dados.viagemId}` as never);
+      }
+    });
+    return () => sub.remove();
   }, [router]);
 
   return (

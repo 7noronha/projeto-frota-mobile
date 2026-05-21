@@ -1,14 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { buscarToken } from '@/lib/auth';
 import { BotaoSairHeader } from '@/components/BotaoSairHeader';
+import { usePushToken } from '@/lib/usePushToken';
 
 export default function LayoutMotorista() {
   const router = useRouter();
+  const [autenticado, setAutenticado] = useState(false);
+
+  // Registra o token Expo Push no servidor enquanto autenticado.
+  // Silencioso se simulador/sem permissão/erro de rede.
+  usePushToken(autenticado);
 
   useEffect(() => {
     buscarToken().then((token) => {
       if (!token) router.replace('/login');
+      else setAutenticado(true);
     });
   }, [router]);
 
