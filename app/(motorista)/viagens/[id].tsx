@@ -26,6 +26,7 @@ import { DetalheViagemSkeleton } from '@/components/DetalheViagemSkeleton';
 import { MapaAcompanhamento } from '@/components/MapaAcompanhamento';
 import { InfoDistancia } from '@/components/InfoDistancia';
 import { useLocalizacaoAtual } from '@/lib/useLocalizacaoAtual';
+import { useEnviarPosicao } from '@/lib/useEnviarPosicao';
 import type { ViagemDetalhada, StatusViagem } from '@/tipos';
 
 const CONFIG_STATUS: Record<StatusViagem, { rotulo: string; cor: string; fundo: string }> = {
@@ -277,6 +278,13 @@ export default function TelaDetalheViagem() {
   // Em memória, nada persiste no servidor.
   const gpsAtivo = viagem?.status === 'EM_ANDAMENTO';
   const { coords: minhaPosicao, status: statusGps } = useLocalizacaoAtual({
+    ativo: gpsAtivo,
+  });
+
+  // Envia a posição pra API a cada 3 min — operador acompanha em tempo real
+  useEnviarPosicao({
+    viagemId: gpsAtivo ? id : null,
+    posicao: minhaPosicao,
     ativo: gpsAtivo,
   });
 
