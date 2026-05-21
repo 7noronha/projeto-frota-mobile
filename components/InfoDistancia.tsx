@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Clock, MapPin, Navigation } from 'lucide-react-native';
+import { Clock, Info, MapPin, Navigation } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import {
   distanciaKm,
@@ -78,7 +78,25 @@ export function InfoDistancia({ posicaoAtual, origem, destino, inicioReal }: Inf
     return itens;
   }, [origem, destino, posicaoAtual, inicioReal, agora]);
 
-  if (metricas.length === 0) return null;
+  if (metricas.length === 0) {
+    // Sem coords e sem inicioReal: card informativo discreto pra usuário
+    // entender por que não há cálculo (em vez de simplesmente não aparecer).
+    return (
+      <View style={styles.card}>
+        <View style={styles.metrica}>
+          <Info size={18} color="#94A3B8" />
+          <View style={styles.textos}>
+            <Text size="xs" style={styles.rotulo}>
+              Distância até o destino
+            </Text>
+            <Text size="sm" style={styles.placeholder}>
+              Aguardando coordenadas do endereço.
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.card}>
@@ -140,6 +158,10 @@ const styles = StyleSheet.create({
   valor: {
     color: '#0F172A',
     fontWeight: '600',
+    marginTop: 2,
+  },
+  placeholder: {
+    color: '#64748B',
     marginTop: 2,
   },
 });
