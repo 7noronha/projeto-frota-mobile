@@ -379,22 +379,26 @@ export default function TelaDetalheViagem() {
           />
         )}
 
-        {/* Distância até o destino + tempo decorrido da viagem em curso */}
-        {gpsAtivo && (
-          <InfoDistancia
-            posicaoAtual={
-              minhaPosicao
-                ? { latitude: minhaPosicao.latitude, longitude: minhaPosicao.longitude }
-                : null
-            }
-            destino={
-              viagem.destinoLatitude != null && viagem.destinoLongitude != null
-                ? { latitude: viagem.destinoLatitude, longitude: viagem.destinoLongitude }
-                : null
-            }
-            inicioReal={viagem.dataHoraInicioReal}
-          />
-        )}
+        {/* Metricas da viagem — distância planejada (sempre), distância restante
+            e tempo decorrido (só com GPS ativo + viagem iniciada) */}
+        <InfoDistancia
+          posicaoAtual={
+            gpsAtivo && minhaPosicao
+              ? { latitude: minhaPosicao.latitude, longitude: minhaPosicao.longitude }
+              : null
+          }
+          origem={
+            viagem.origemLatitude != null && viagem.origemLongitude != null
+              ? { latitude: viagem.origemLatitude, longitude: viagem.origemLongitude }
+              : null
+          }
+          destino={
+            viagem.destinoLatitude != null && viagem.destinoLongitude != null
+              ? { latitude: viagem.destinoLatitude, longitude: viagem.destinoLongitude }
+              : null
+          }
+          inicioReal={viagem.dataHoraInicioReal}
+        />
 
         {/* Informações gerais */}
         <SecaoCard titulo="Detalhes">

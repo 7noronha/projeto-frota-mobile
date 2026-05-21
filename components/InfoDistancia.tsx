@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Clock, Navigation } from 'lucide-react-native';
+import { Clock, MapPin, Navigation } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import {
   distanciaKm,
@@ -10,20 +10,30 @@ import {
 } from '@/lib/distancia';
 
 interface InfoDistanciaProps {
+  /** Posição atual do motorista (GPS). Quando ausente, só mostra a planejada. */
   posicaoAtual: PontoGeo | null;
+  origem: PontoGeo | null;
   destino: PontoGeo | null;
-  /** ISO 8601 do início real da viagem. */
+  /** ISO 8601 do início real da viagem (para "em viagem há"). */
   inicioReal: string | null;
 }
 
+interface Metrica {
+  rotulo: string;
+  valor: string;
+  Icone: typeof Navigation;
+}
+
 /**
- * Card compacto com:
- *  - "Faltam X km" — distância em linha reta até o destino
- *  - "Em viagem há Y" — tempo decorrido desde o início real
+ * Card de métricas da viagem. Mostra três blocos conforme dados disponíveis:
+ *  - **Distância planejada** (origem→destino) — sempre que houver coords
+ *  - **Faltam X km** (posição atual→destino) — quando o motorista está em
+ *    viagem (GPS ativo)
+ *  - **Em viagem há Y** — desde o início real
  *
- * Não persiste nada. Atualiza o tempo decorrido a cada 30s.
+ * Sem nenhum dos três, não renderiza nada.
  */
-export function InfoDistancia({ posicaoAtual, destino, inicioReal }: InfoDistanciaProps) {
+export function InfoDistancia({ posicaoAtual, origem, destino, inicioReal }: InfoDistanciaProps) {
   const [agora, setAgora] = useState(() => Date.now());
 
   useEffect(() => {
@@ -32,54 +42,62 @@ export function InfoDistancia({ posicaoAtual, destino, inicioReal }: InfoDistanc
     return () => clearInterval(t);
   }, [inicioReal]);
 
-  const restanteKm = useMemo(() => {
-    if (!posicaoAtual || !destino) return null;
-    return distanciaKm(posicaoAtual, destino);
-  }, [posicaoAtual, destino]);
+  const metricas = useMemo<Metrica[]>(() => {
+    const itens: Metrica[] = [];
 
-  const decorridoMin = useMemo(() => {
-    if (!inicioReal) return null;
-    const inicioMs = new Date(inicioReal).getTime();
-    if (!Number.isFinite(inicioMs)) return null;
-    return Math.max((agora - inicioMs) / 60_000, 0);
-  }, [inicioReal, agora]);
+    // 1. Distância planejada — base estática da viagem
+    if (origem && destino) {
+      itens.push({
+        rotulo: 'Distância planejada',
+        valor: formatarDistancia(distanciaKm(origem, destino)),
+        Icone: MapPin,
+      });
+    }
 
-  if (restanteKm == null && decorridoMin == null) return null;
+    // 2. Distância restante — só quando motorista está dirigindo
+    if (posicaoAtual && destino) {
+      itens.push({
+        rotulo: 'Faltam',
+        valor: formatarDistancia(distanciaKm(posicaoAtual, destino)),
+        Icone: Navigation,
+      });
+    }
+
+    // 3. Tempo decorrido — só quando a viagem já começou
+    if (inicioReal) {
+      const inicioMs = new Date(inicioReal).getTime();
+      if (Number.isFinite(inicioMs)) {
+        itens.push({
+          rotulo: 'Em viagem há',
+          valor: formatarTempo(Math.max((agora - inicioMs) / 60_000, 0)),
+          Icone: Clock,
+        });
+      }
+    }
+
+    return itens;
+  }, [origem, destino, posicaoAtual, inicioReal, agora]);
+
+  if (metricas.length === 0) return null;
 
   return (
     <View style={styles.card}>
       <View style={styles.linha}>
-        {restanteKm != null && (
-          <View style={styles.metrica}>
-            <Navigation size={18} color="#0066FF" />
-            <View>
-              <Text size="xs" style={styles.rotulo}>
-                Faltam
-              </Text>
-              <Text size="md" style={styles.valor}>
-                {formatarDistancia(restanteKm)}
-              </Text>
+        {metricas.map((m, i) => (
+          <View key={m.rotulo} style={[styles.metricaWrapper, i > 0 && styles.separador]}>
+            <View style={styles.metrica}>
+              <m.Icone size={18} color="#0066FF" />
+              <View style={styles.textos}>
+                <Text size="xs" style={styles.rotulo}>
+                  {m.rotulo}
+                </Text>
+                <Text size="md" style={styles.valor}>
+                  {m.valor}
+                </Text>
+              </View>
             </View>
           </View>
-        )}
-
-        {restanteKm != null && decorridoMin != null && (
-          <View style={styles.separador} />
-        )}
-
-        {decorridoMin != null && (
-          <View style={styles.metrica}>
-            <Clock size={18} color="#0066FF" />
-            <View>
-              <Text size="xs" style={styles.rotulo}>
-                Em viagem há
-              </Text>
-              <Text size="md" style={styles.valor}>
-                {formatarTempo(decorridoMin)}
-              </Text>
-            </View>
-          </View>
-        )}
+        ))}
       </View>
     </View>
   );
@@ -97,17 +115,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  metrica: {
+  metricaWrapper: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
   },
   separador: {
-    width: 1,
-    height: 32,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 8,
+    borderLeftWidth: 1,
+    borderLeftColor: '#E2E8F0',
+    paddingLeft: 12,
+    marginLeft: 4,
+  },
+  metrica: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  textos: {
+    flexShrink: 1,
   },
   rotulo: {
     color: '#94A3B8',
