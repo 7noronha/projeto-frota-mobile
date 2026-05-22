@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatarDataIso, formatarDataHoraIso } from '@/lib/datetime';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@/components/ui/box';
@@ -266,7 +266,6 @@ function FormFinalizar({ id, odometroInicial }: { id: string; odometroInicial: n
 
 export default function TelaDetalheViagem() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const insets = useSafeAreaInsets();
 
   const { data: viagem, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['viagem', id],
@@ -290,17 +289,23 @@ export default function TelaDetalheViagem() {
 
   if (isLoading) {
     return (
-      <ScrollView
+      <SafeAreaView
         style={{ flex: 1, backgroundColor: '#F8FAFC' }}
-        contentContainerStyle={{ paddingBottom: insets.bottom }}
+        edges={['bottom', 'left', 'right']}
       >
-        <DetalheViagemSkeleton />
-      </ScrollView>
+        <ScrollView style={{ flex: 1 }}>
+          <DetalheViagemSkeleton />
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 
   if (isError || !viagem) {
     return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+        edges={['bottom', 'left', 'right']}
+      >
       <Box
         style={{
           flex: 1,
@@ -308,7 +313,6 @@ export default function TelaDetalheViagem() {
           justifyContent: 'center',
           paddingHorizontal: 24,
           backgroundColor: '#F8FAFC',
-          paddingBottom: insets.bottom,
         }}
       >
         <Text style={{ color: '#DC2626', textAlign: 'center', marginBottom: 16 }}>
@@ -322,6 +326,7 @@ export default function TelaDetalheViagem() {
           <ButtonText style={{ color: '#0066FF' }}>Tentar novamente</ButtonText>
         </Button>
       </Box>
+      </SafeAreaView>
     );
   }
 
@@ -329,9 +334,12 @@ export default function TelaDetalheViagem() {
   const dataViagem = formatarDataIso(viagem.dataViagem);
 
   return (
-    <ScrollView
+    <SafeAreaView
       style={{ flex: 1, backgroundColor: '#F8FAFC' }}
-      contentContainerStyle={{ paddingBottom: insets.bottom }}
+      edges={['bottom', 'left', 'right']}
+    >
+    <ScrollView
+      style={{ flex: 1 }}
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#0066FF" />
       }
@@ -516,5 +524,6 @@ export default function TelaDetalheViagem() {
         )}
       </VStack>
     </ScrollView>
+    </SafeAreaView>
   );
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@/components/ui/box';
 import { VStack } from '@/components/ui/vstack';
@@ -37,7 +37,6 @@ function paraNumero(v: string): number {
 }
 
 export default function TelaAbastecimento() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
   const notificar = useNotificar();
@@ -155,9 +154,15 @@ export default function TelaAbastecimento() {
   }
 
   return (
+    // Dentro de Stack com header — não aplicar 'top' (já tratado pelo header).
+    // 'bottom' protege contra a barra de navegação de 3 botões do Android.
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+      edges={['bottom', 'left', 'right']}
+    >
     <ScrollView
       style={{ flex: 1, backgroundColor: '#F8FAFC' }}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      contentContainerStyle={{ paddingBottom: 24 }}
     >
       <VStack style={{ gap: 16, paddingHorizontal: 16, paddingVertical: 16 }}>
         <Box>
@@ -359,5 +364,6 @@ export default function TelaAbastecimento() {
         </Button>
       </VStack>
     </ScrollView>
+    </SafeAreaView>
   );
 }
