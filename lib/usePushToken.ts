@@ -1,14 +1,19 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { fetchApi } from '@/lib/api';
 
 /**
  * Hook que registra o token Expo Push do dispositivo quando o motorista
  * está logado. Solicita permissão, captura o token, envia pra API e
  * permanece silencioso em caso de falha (sem permissão, simulador, etc).
+ *
+ * NÃO funciona em Expo Go (SDK 53+ removeu push). Pra testar push real:
+ * `eas build --profile development` (dev build) ou `--profile preview` (apk).
+ *
+ * Em Expo Go, o hook é no-op completo — nem importa `expo-notifications`,
+ * pra não disparar o warning ruidoso da lib.
  *
  * Deve ser usado uma vez no layout autenticado (após login).
  */
@@ -19,11 +24,19 @@ export function usePushToken(estaLogado: boolean): void {
       // Push só funciona em dispositivo físico. Simuladores não recebem.
       return;
     }
+    if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+      // Expo Go (StoreClient) — push foi removido no SDK 53. No-op.
+      return;
+    }
 
     let cancelado = false;
 
     (async () => {
       try {
+        // Import dinâmico — só carrega expo-notifications em dev/prod build,
+        // evitando o warning automático em Expo Go.
+        const Notifications = await import('expo-notifications');
+
         // 1. Configura canal padrão no Android (obrigatório pra >= API 26)
         if (Platform.OS === 'android') {
           await Notifications.setNotificationChannelAsync('default', {
@@ -47,10 +60,6 @@ export function usePushToken(estaLogado: boolean): void {
         const projectId =
           (Constants?.expoConfig?.extra?.eas as { projectId?: string } | undefined)?.projectId ??
           Constants?.easConfig?.projectId;
-        if (!projectId) {
-          // Sem projectId não dá pra emitir token. Build local (Expo Go público)
-          // ainda pega um token genérico — tentamos sem o projectId.
-        }
 
         const tokenResp = await Notifications.getExpoPushTokenAsync(
           projectId ? { projectId } : undefined,

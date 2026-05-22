@@ -5,19 +5,27 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { ErroApi, registrarHandlerNaoAutenticado } from '@/lib/api';
 
-// Mostra notificação mesmo com app aberto (foreground)
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Push notifications só carregam fora do Expo Go (SDK 53+ removeu push lá).
+// Import dinâmico evita o warning ruidoso da lib no Expo Go.
+const ehExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+if (!ehExpoGo) {
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+  import('expo-notifications').then((Notifications) => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,17 +52,23 @@ export default function RootLayout() {
     });
   }, [router]);
 
-  // Deep-link no tap da notificação — leva pra tela da viagem
+  // Deep-link no tap da notificação — leva pra tela da viagem.
+  // Em Expo Go, pula (push não está disponível).
   useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener((resposta) => {
-      const dados = resposta.notification.request.content.data as
-        | { tela?: string; viagemId?: string }
-        | undefined;
-      if (dados?.tela === 'viagem' && dados.viagemId) {
-        router.push(`/(motorista)/viagens/${dados.viagemId}` as never);
-      }
-    });
-    return () => sub.remove();
+    if (ehExpoGo) return;
+    let subscription: { remove: () => void } | undefined;
+    (async () => {
+      const Notifications = await import('expo-notifications');
+      subscription = Notifications.addNotificationResponseReceivedListener((resposta) => {
+        const dados = resposta.notification.request.content.data as
+          | { tela?: string; viagemId?: string }
+          | undefined;
+        if (dados?.tela === 'viagem' && dados.viagemId) {
+          router.push(`/(motorista)/viagens/${dados.viagemId}` as never);
+        }
+      });
+    })();
+    return () => subscription?.remove();
   }, [router]);
 
   return (
