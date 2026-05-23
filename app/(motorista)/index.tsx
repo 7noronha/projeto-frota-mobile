@@ -41,7 +41,7 @@ function BadgeStatus({ status }: { status: StatusViagem }) {
 
 function CartaoViagem({ viagem }: { viagem: ViagemDetalhada }) {
   const router = useRouter();
-  const data = formatarDataIso(viagem.dataViagem);
+  const data = formatarDataIso(viagem.data_viagem);
 
   return (
     <Pressable
@@ -72,7 +72,7 @@ function CartaoViagem({ viagem }: { viagem: ViagemDetalhada }) {
           >
             {viagem.destino}
           </Text>
-          <BadgeStatus status={viagem.status} />
+          <BadgeStatus status={viagem.status.nome as StatusViagem} />
         </HStack>
 
         <HStack style={{ gap: 12, marginTop: 4 }}>
@@ -80,13 +80,13 @@ function CartaoViagem({ viagem }: { viagem: ViagemDetalhada }) {
             {data}
           </Text>
           <Text size="sm" style={{ color: '#64748B' }}>
-            {viagem.horaInicioPrevista} – {viagem.horaFimPrevista}
+            {viagem.hora_inicio_prevista} – {viagem.hora_fim_prevista}
           </Text>
         </HStack>
 
-        {viagem.distanciaPercorrida != null && (
+        {viagem.distancia_percorrida != null && (
           <Text size="sm" style={{ color: '#64748B', marginTop: 4 }}>
-            {viagem.distanciaPercorrida.toLocaleString('pt-BR')} km percorridos
+            {viagem.distancia_percorrida.toLocaleString('pt-BR')} km percorridos
           </Text>
         )}
       </Box>
@@ -106,7 +106,7 @@ export default function TelaViagens() {
   const insets = useSafeAreaInsets();
   const [filtroStatus, setFiltroStatus] = useState<StatusViagem | undefined>();
 
-  const params = new URLSearchParams({ tamanhoPagina: '50' });
+  const params = new URLSearchParams({ tamanho_pagina: '50' });
   if (filtroStatus) params.set('status', filtroStatus);
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({

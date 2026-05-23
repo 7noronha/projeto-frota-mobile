@@ -23,12 +23,14 @@ import { fetchApi, ErroApi } from '@/lib/api';
 import { useNotificar } from '@/lib/notificar';
 import type { CriarAbastecimento, TipoCombustivel, VeiculoResumo } from '@/tipos';
 
-const COMBUSTIVEIS: { valor: TipoCombustivel; rotulo: string }[] = [
-  { valor: 'gasolina', rotulo: 'Gasolina' },
-  { valor: 'etanol', rotulo: 'Etanol' },
-  { valor: 'diesel', rotulo: 'Diesel' },
-  { valor: 'gnv', rotulo: 'GNV' },
-  { valor: 'flex', rotulo: 'Flex' },
+// IDs correspondem aos seed lookups tipos_combustivel (ver seed.ts).
+// Em produção real, isso deve vir de GET /lookups/tipos_combustivel.
+const COMBUSTIVEIS: { id: number; valor: TipoCombustivel; rotulo: string }[] = [
+  { id: 1, valor: 'gasolina', rotulo: 'Gasolina' },
+  { id: 2, valor: 'etanol', rotulo: 'Etanol' },
+  { id: 3, valor: 'diesel', rotulo: 'Diesel' },
+  { id: 4, valor: 'gnv', rotulo: 'GNV' },
+  { id: 5, valor: 'flex', rotulo: 'Flex' },
 ];
 
 // Aceita vírgula (pt-BR) ou ponto
@@ -51,11 +53,11 @@ export default function TelaAbastecimento() {
     queryFn: () => fetchApi<VeiculoResumo[]>('/veiculos/meus'),
   });
 
-  const [veiculoId, setVeiculoId] = useState<string | null>(null);
+  const [veiculoId, setVeiculoId] = useState<number | null>(null);
   const [litros, setLitros] = useState('');
-  const [precoLitro, setPrecoLitro] = useState('');
+  const [preco_litro, setPrecoLitro] = useState('');
   const [valor, setValor] = useState('');
-  const [combustivel, setCombustivel] = useState<TipoCombustivel | null>(null);
+  const [combustivel, setCombustivel] = useState<number | null>(null);
   const [odometro, setOdometro] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [erro, setErro] = useState<string | null>(null);
@@ -66,10 +68,10 @@ export default function TelaAbastecimento() {
 
   const totalCalculado = useMemo(() => {
     const l = paraNumero(litros);
-    const p = paraNumero(precoLitro);
+    const p = paraNumero(preco_litro);
     if (!isNaN(l) && !isNaN(p) && l > 0 && p > 0) return (l * p).toFixed(2);
     return null;
-  }, [litros, precoLitro]);
+  }, [litros, preco_litro]);
 
   const mutacao = useMutation({
     mutationFn: (corpo: CriarAbastecimento) =>
@@ -95,7 +97,7 @@ export default function TelaAbastecimento() {
   function handleSalvar() {
     if (!veiculoSelecionado) return setErro('Selecione o veículo');
     const l = paraNumero(litros);
-    const p = paraNumero(precoLitro);
+    const p = paraNumero(preco_litro);
     const v = valor.trim() ? paraNumero(valor) : Number(totalCalculado);
 
     if (isNaN(l) || l <= 0) return setErro('Informe os litros (maior que zero)');
@@ -112,8 +114,8 @@ export default function TelaAbastecimento() {
     mutacao.mutate({
       valor: Number(v.toFixed(2)),
       litros: l,
-      precoLitro: p,
-      tipoCombustivel: combustivel,
+      preco_litro: p,
+      tipo_combustivel_id: combustivel,
       odometro: odo,
       observacoes: observacoes.trim() || undefined,
     });
@@ -239,7 +241,7 @@ export default function TelaAbastecimento() {
           <Input variant="outline" style={{ backgroundColor: '#FFFFFF' }}>
             <InputField
               keyboardType="decimal-pad"
-              value={precoLitro}
+              value={preco_litro}
               onChangeText={(t) => {
                 setPrecoLitro(t);
                 setErro(null);
@@ -281,12 +283,12 @@ export default function TelaAbastecimento() {
           </FormControlLabel>
           <HStack style={{ gap: 8, flexWrap: 'wrap' }}>
             {COMBUSTIVEIS.map((c) => {
-              const ativo = combustivel === c.valor;
+              const ativo = combustivel === c.id;
               return (
                 <Pressable
                   key={c.valor}
                   onPress={() => {
-                    setCombustivel(c.valor);
+                    setCombustivel(c.id);
                     setErro(null);
                   }}
                   style={{

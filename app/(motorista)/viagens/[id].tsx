@@ -78,17 +78,17 @@ function SecaoCard({ titulo, children }: { titulo: string; children: React.React
   );
 }
 
-function FormIniciar({ id, odometroAtual }: { id: string; odometroAtual: number }) {
-  const [odometro, setOdometro] = useState(String(odometroAtual));
+function FormIniciar({ id, odometro_atual }: { id: number; odometro_atual: number }) {
+  const [odometro, setOdometro] = useState(String(odometro_atual));
   const [erro, setErro] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const notificar = useNotificar();
 
   const mutacao = useMutation({
-    mutationFn: (odometroInicial: number) =>
+    mutationFn: (odometro_inicial: number) =>
       fetchApi(`/viagens/${id}/iniciar`, {
         method: 'PATCH',
-        body: JSON.stringify({ odometroInicial }),
+        body: JSON.stringify({ odometro_inicial }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['viagem', id] });
@@ -107,8 +107,8 @@ function FormIniciar({ id, odometroAtual }: { id: string; odometroAtual: number 
 
   function handleIniciar() {
     const valor = parseInt(odometro, 10);
-    if (isNaN(valor) || valor < odometroAtual) {
-      setErro(`Odômetro deve ser ≥ ${odometroAtual.toLocaleString('pt-BR')} km`);
+    if (isNaN(valor) || valor < odometro_atual) {
+      setErro(`Odômetro deve ser ≥ ${odometro_atual.toLocaleString('pt-BR')} km`);
       return;
     }
     setErro(null);
@@ -142,11 +142,11 @@ function FormIniciar({ id, odometroAtual }: { id: string; odometroAtual: number 
               setOdometro(v);
               setErro(null);
             }}
-            placeholder={String(odometroAtual)}
+            placeholder={String(odometro_atual)}
           />
         </Input>
         <Text size="xs" style={{ color: '#94A3B8', marginTop: 4 }}>
-          Odômetro atual do veículo: {odometroAtual.toLocaleString('pt-BR')} km
+          Odômetro atual do veículo: {odometro_atual.toLocaleString('pt-BR')} km
         </Text>
         {erro && (
           <FormControlError>
@@ -171,17 +171,17 @@ function FormIniciar({ id, odometroAtual }: { id: string; odometroAtual: number 
   );
 }
 
-function FormFinalizar({ id, odometroInicial }: { id: string; odometroInicial: number }) {
+function FormFinalizar({ id, odometro_inicial }: { id: number; odometro_inicial: number }) {
   const [odometro, setOdometro] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const notificar = useNotificar();
 
   const mutacao = useMutation({
-    mutationFn: (odometroFinal: number) =>
+    mutationFn: (odometro_final: number) =>
       fetchApi(`/viagens/${id}/finalizar`, {
         method: 'PATCH',
-        body: JSON.stringify({ odometroFinal }),
+        body: JSON.stringify({ odometro_final }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['viagem', id] });
@@ -200,8 +200,8 @@ function FormFinalizar({ id, odometroInicial }: { id: string; odometroInicial: n
 
   function handleFinalizar() {
     const valor = parseInt(odometro, 10);
-    if (isNaN(valor) || valor <= odometroInicial) {
-      setErro(`Odômetro deve ser > ${odometroInicial.toLocaleString('pt-BR')} km`);
+    if (isNaN(valor) || valor <= odometro_inicial) {
+      setErro(`Odômetro deve ser > ${odometro_inicial.toLocaleString('pt-BR')} km`);
       return;
     }
     setErro(null);
@@ -235,11 +235,11 @@ function FormFinalizar({ id, odometroInicial }: { id: string; odometroInicial: n
               setOdometro(v);
               setErro(null);
             }}
-            placeholder={String(odometroInicial + 1)}
+            placeholder={String(odometro_inicial + 1)}
           />
         </Input>
         <Text size="xs" style={{ color: '#94A3B8', marginTop: 4 }}>
-          Odômetro na saída: {odometroInicial.toLocaleString('pt-BR')} km
+          Odômetro na saída: {odometro_inicial.toLocaleString('pt-BR')} km
         </Text>
         {erro && (
           <FormControlError>
@@ -275,7 +275,7 @@ export default function TelaDetalheViagem() {
 
   // GPS do motorista — só ativo quando a viagem está em andamento.
   // Em memória, nada persiste no servidor.
-  const gpsAtivo = viagem?.status === 'EM_ANDAMENTO';
+  const gpsAtivo = viagem?.status?.nome === 'EM_ANDAMENTO';
   const { coords: minhaPosicao, status: statusGps } = useLocalizacaoAtual({
     ativo: gpsAtivo,
   });
@@ -330,8 +330,8 @@ export default function TelaDetalheViagem() {
     );
   }
 
-  const cfg = CONFIG_STATUS[viagem.status];
-  const dataViagem = formatarDataIso(viagem.dataViagem);
+  const cfg = CONFIG_STATUS[viagem.status.nome as StatusViagem];
+  const data_viagem = formatarDataIso(viagem.data_viagem);
 
   return (
     <SafeAreaView
@@ -367,7 +367,7 @@ export default function TelaDetalheViagem() {
             {viagem.destino}
           </Heading>
           <Text style={{ color: '#94A3B8', marginTop: 4 }}>
-            {dataViagem} · {viagem.horaInicioPrevista} – {viagem.horaFimPrevista}
+            {data_viagem} · {viagem.hora_inicio_prevista} – {viagem.hora_fim_prevista}
           </Text>
         </Box>
 
@@ -375,12 +375,12 @@ export default function TelaDetalheViagem() {
 
         {/* Mapa de acompanhamento — só mostra se há coordenadas; GPS do
             motorista é ativado apenas em viagens EM_ANDAMENTO */}
-        {(viagem.origemLatitude != null || viagem.destinoLatitude != null) && (
+        {(viagem.origem_latitude != null || viagem.destino_latitude != null) && (
           <MapaAcompanhamento
-            origemLatitude={viagem.origemLatitude}
-            origemLongitude={viagem.origemLongitude}
-            destinoLatitude={viagem.destinoLatitude}
-            destinoLongitude={viagem.destinoLongitude}
+            origem_latitude={viagem.origem_latitude}
+            origem_longitude={viagem.origem_longitude}
+            destino_latitude={viagem.destino_latitude}
+            destino_longitude={viagem.destino_longitude}
             posicaoMotorista={
               minhaPosicao
                 ? {
@@ -404,18 +404,18 @@ export default function TelaDetalheViagem() {
               : null
           }
           origem={
-            viagem.origemLatitude != null && viagem.origemLongitude != null
-              ? { latitude: viagem.origemLatitude, longitude: viagem.origemLongitude }
+            viagem.origem_latitude != null && viagem.origem_longitude != null
+              ? { latitude: viagem.origem_latitude, longitude: viagem.origem_longitude }
               : null
           }
           destino={
-            viagem.destinoLatitude != null && viagem.destinoLongitude != null
-              ? { latitude: viagem.destinoLatitude, longitude: viagem.destinoLongitude }
+            viagem.destino_latitude != null && viagem.destino_longitude != null
+              ? { latitude: viagem.destino_latitude, longitude: viagem.destino_longitude }
               : null
           }
-          inicioReal={viagem.dataHoraInicioReal}
-          rotaDistanciaKm={viagem.rotaDistanciaKm}
-          velocidadeMediaKmH={viagem.velocidadeMediaKmH}
+          inicioReal={viagem.data_hora_inicio_real}
+          rota_distancia_km={viagem.rota_distancia_km}
+          velocidade_media_km_h={viagem.velocidade_media_km_h}
         />
 
         {/* Informações gerais */}
@@ -423,18 +423,18 @@ export default function TelaDetalheViagem() {
           <VStack style={{ gap: 12 }}>
             <HStack style={{ gap: 16 }}>
               <Box style={{ flex: 1 }}>
-                <CampoInfo rotulo="Data" valor={dataViagem} />
+                <CampoInfo rotulo="Data" valor={data_viagem} />
               </Box>
               <Box style={{ flex: 1 }}>
                 <CampoInfo
                   rotulo="Horário previsto"
-                  valor={`${viagem.horaInicioPrevista} – ${viagem.horaFimPrevista}`}
+                  valor={`${viagem.hora_inicio_prevista} – ${viagem.hora_fim_prevista}`}
                 />
               </Box>
             </HStack>
             <CampoInfo rotulo="Origem" valor={viagem.origem} />
-            <CampoInfo rotulo="Solicitado por" valor={viagem.solicitadoPor} />
-            <CampoInfo rotulo="Autorizado por" valor={viagem.autorizadoPor} />
+            <CampoInfo rotulo="Solicitado por" valor={viagem.solicitado_por} />
+            <CampoInfo rotulo="Autorizado por" valor={viagem.autorizado_por} />
             {viagem.observacoes && (
               <CampoInfo rotulo="Observações" valor={viagem.observacoes} />
             )}
@@ -457,7 +457,7 @@ export default function TelaDetalheViagem() {
         </SecaoCard>
 
         {/* Execução (quando iniciada) */}
-        {viagem.status !== 'CRIADA' && (
+        {viagem.status.nome !== 'CRIADA' && (
           <SecaoCard titulo="Execução">
             <VStack style={{ gap: 12 }}>
               <HStack style={{ gap: 16 }}>
@@ -465,8 +465,8 @@ export default function TelaDetalheViagem() {
                   <CampoInfo
                     rotulo="Início real"
                     valor={
-                      viagem.dataHoraInicioReal
-                        ? formatarDataHoraIso(viagem.dataHoraInicioReal)
+                      viagem.data_hora_inicio_real
+                        ? formatarDataHoraIso(viagem.data_hora_inicio_real)
                         : undefined
                     }
                   />
@@ -475,8 +475,8 @@ export default function TelaDetalheViagem() {
                   <CampoInfo
                     rotulo="Fim real"
                     valor={
-                      viagem.dataHoraFimReal
-                        ? formatarDataHoraIso(viagem.dataHoraFimReal)
+                      viagem.data_hora_fim_real
+                        ? formatarDataHoraIso(viagem.data_hora_fim_real)
                         : undefined
                     }
                   />
@@ -487,8 +487,8 @@ export default function TelaDetalheViagem() {
                   <CampoInfo
                     rotulo="Odôm. inicial"
                     valor={
-                      viagem.odometroInicial != null
-                        ? `${viagem.odometroInicial.toLocaleString('pt-BR')} km`
+                      viagem.odometro_inicial != null
+                        ? `${viagem.odometro_inicial.toLocaleString('pt-BR')} km`
                         : undefined
                     }
                   />
@@ -497,17 +497,17 @@ export default function TelaDetalheViagem() {
                   <CampoInfo
                     rotulo="Odôm. final"
                     valor={
-                      viagem.odometroFinal != null
-                        ? `${viagem.odometroFinal.toLocaleString('pt-BR')} km`
+                      viagem.odometro_final != null
+                        ? `${viagem.odometro_final.toLocaleString('pt-BR')} km`
                         : undefined
                     }
                   />
                 </Box>
               </HStack>
-              {viagem.distanciaPercorrida != null && (
+              {viagem.distancia_percorrida != null && (
                 <CampoInfo
                   rotulo="Distância percorrida"
-                  valor={`${viagem.distanciaPercorrida.toLocaleString('pt-BR')} km`}
+                  valor={`${viagem.distancia_percorrida.toLocaleString('pt-BR')} km`}
                 />
               )}
             </VStack>
@@ -515,12 +515,12 @@ export default function TelaDetalheViagem() {
         )}
 
         {/* Ação contextual */}
-        {viagem.status === 'CRIADA' && (
-          <FormIniciar id={viagem.id} odometroAtual={viagem.veiculo.odometroAtual} />
+        {viagem.status.nome === 'CRIADA' && (
+          <FormIniciar id={viagem.id} odometro_atual={viagem.veiculo.odometro_atual} />
         )}
 
-        {viagem.status === 'EM_ANDAMENTO' && viagem.odometroInicial != null && (
-          <FormFinalizar id={viagem.id} odometroInicial={viagem.odometroInicial} />
+        {viagem.status.nome === 'EM_ANDAMENTO' && viagem.odometro_inicial != null && (
+          <FormFinalizar id={viagem.id} odometro_inicial={viagem.odometro_inicial} />
         )}
       </VStack>
     </ScrollView>

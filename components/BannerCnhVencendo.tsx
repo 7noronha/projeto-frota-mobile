@@ -40,8 +40,8 @@ const CONFIG: Record<'vencida' | 'critico' | 'alerta', ConfigBanner> = {
   },
 };
 
-function calcularDias(cnhValidade: string): number {
-  const validade = new Date(cnhValidade + 'T00:00:00');
+function calcularDias(cnh_validade: string): number {
+  const validade = new Date(cnh_validade + 'T00:00:00');
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   return Math.ceil((validade.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
@@ -54,9 +54,9 @@ export function BannerCnhVencendo(): React.ReactElement | null {
     staleTime: 5 * 60_000,
   });
 
-  if (!me?.cnhValidade) return null;
+  if (!me?.cnh_validade) return null;
 
-  const dias = calcularDias(me.cnhValidade);
+  const dias = calcularDias(me.cnh_validade);
   if (dias > DIAS_ALERTA) return null;
 
   const variante: keyof typeof CONFIG = dias < 0 ? 'vencida' : dias <= 7 ? 'critico' : 'alerta';

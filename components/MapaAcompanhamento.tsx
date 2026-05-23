@@ -5,10 +5,10 @@ import { Text } from '@/components/ui/text';
 import type { StatusLocalizacao } from '@/lib/useLocalizacaoAtual';
 
 interface MapaAcompanhamentoProps {
-  origemLatitude: number | null;
-  origemLongitude: number | null;
-  destinoLatitude: number | null;
-  destinoLongitude: number | null;
+  origem_latitude: number | null;
+  origem_longitude: number | null;
+  destino_latitude: number | null;
+  destino_longitude: number | null;
   /** Posição atual do motorista (hoisted) — null se GPS inativo/indisponível. */
   posicaoMotorista: { latitude: number; longitude: number; precisao: number | null } | null;
   /** Estado da permissão/GPS do motorista (para aviso visual). */
@@ -54,10 +54,10 @@ function regiaoEnquadrandoPontos(pontos: Ponto[]): Region {
  * exibida — não é persistida em lugar nenhum.
  */
 export function MapaAcompanhamento({
-  origemLatitude,
-  origemLongitude,
-  destinoLatitude,
-  destinoLongitude,
+  origem_latitude,
+  origem_longitude,
+  destino_latitude,
+  destino_longitude,
   posicaoMotorista,
   statusGps,
   mostrarAvisoGps = false,
@@ -67,17 +67,17 @@ export function MapaAcompanhamento({
 
   const origem = useMemo<Ponto | null>(
     () =>
-      origemLatitude != null && origemLongitude != null
-        ? { latitude: origemLatitude, longitude: origemLongitude }
+      origem_latitude != null && origem_longitude != null
+        ? { latitude: origem_latitude, longitude: origem_longitude }
         : null,
-    [origemLatitude, origemLongitude],
+    [origem_latitude, origem_longitude],
   );
   const destino = useMemo<Ponto | null>(
     () =>
-      destinoLatitude != null && destinoLongitude != null
-        ? { latitude: destinoLatitude, longitude: destinoLongitude }
+      destino_latitude != null && destino_longitude != null
+        ? { latitude: destino_latitude, longitude: destino_longitude }
         : null,
-    [destinoLatitude, destinoLongitude],
+    [destino_latitude, destino_longitude],
   );
 
   const minha = posicaoMotorista;

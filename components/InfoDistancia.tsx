@@ -18,10 +18,10 @@ interface InfoDistanciaProps {
   inicioReal: string | null;
   /** Distância real por estrada (km) vinda da rota Mapbox cacheada no banco.
    * Quando presente, substitui Haversine no cálculo de ETA. */
-  rotaDistanciaKm?: number | null;
+  rota_distancia_km?: number | null;
   /** Velocidade média histórica do motorista (km/h). Quando presente,
    * substitui o fallback de 40 km/h no cálculo de ETA. */
-  velocidadeMediaKmH?: number | null;
+  velocidade_media_km_h?: number | null;
 }
 
 interface Metrica {
@@ -44,8 +44,8 @@ export function InfoDistancia({
   origem,
   destino,
   inicioReal,
-  rotaDistanciaKm,
-  velocidadeMediaKmH,
+  rota_distancia_km,
+  velocidade_media_km_h,
 }: InfoDistanciaProps) {
   const [agora, setAgora] = useState(() => Date.now());
 
@@ -61,7 +61,7 @@ export function InfoDistancia({
     // 1. Distância planejada — prioriza rota real por estrada; cai pra
     // linha reta (Haversine) se não houver cache da rota
     if (origem && destino) {
-      const km = rotaDistanciaKm ?? distanciaKm(origem, destino);
+      const km = rota_distancia_km ?? distanciaKm(origem, destino);
       itens.push({
         rotulo: 'Distância planejada',
         valor: formatarDistancia(km),
@@ -79,7 +79,7 @@ export function InfoDistancia({
       });
 
       // 2b. ETA — usa velocidade calibrada do motorista quando disponível
-      const velocidadeKmH = velocidadeMediaKmH ?? 40;
+      const velocidadeKmH = velocidade_media_km_h ?? 40;
       if (velocidadeKmH > 0) {
         const minutos = (kmRestante / velocidadeKmH) * 60;
         itens.push({
@@ -104,7 +104,7 @@ export function InfoDistancia({
     }
 
     return itens;
-  }, [origem, destino, posicaoAtual, inicioReal, agora, rotaDistanciaKm, velocidadeMediaKmH]);
+  }, [origem, destino, posicaoAtual, inicioReal, agora, rota_distancia_km, velocidade_media_km_h]);
 
   if (metricas.length === 0) {
     // Sem coords e sem inicioReal: card informativo discreto pra usuário

@@ -1,18 +1,28 @@
 // Tipos vendorizados (cópia da superfície usada de @fleetops/types).
 // O app mobile é standalone (npm, fora do monorepo bun) — sem acoplamento
 // com packages/*. Manter em sincronia com a API se o contrato mudar.
+//
+// Schema atual: snake_case + INT IDs (refactor 2026-05).
 
-export type Perfil = 'admin' | 'gerente' | 'encarregado' | 'operador' | 'motorista';
+export interface ItemLookup {
+  id: number;
+  nome: string;
+  descricao: string | null;
+}
 
+// Aliases para compat com código mobile (status/perfil/tipo_combustivel
+// agora são lookups — usar .nome para comparações).
 export type StatusViagem = 'CRIADA' | 'EM_ANDAMENTO' | 'FINALIZADA';
+export type Perfil = 'admin' | 'gerente' | 'encarregado' | 'operador' | 'motorista';
+export type TipoCombustivel = 'gasolina' | 'etanol' | 'diesel' | 'gnv' | 'flex';
 
 export interface RespostaLogin {
   token: string;
   usuario: {
-    id: string;
+    id: number;
     matricula: string;
     nome: string;
-    perfil: Perfil;
+    perfil: string; // nome do perfil ("motorista", "admin", etc.)
   };
 }
 
@@ -20,78 +30,75 @@ export interface RespostaPaginada<T> {
   dados: T[];
   total: number;
   pagina: number;
-  tamanhoPagina: number;
-  totalPaginas: number;
+  tamanho_pagina: number;
+  total_paginas: number;
 }
 
 export interface UsuarioResposta {
-  id: string;
+  id: number;
   matricula: string;
   nome: string;
-  perfil: Perfil;
+  perfil_id: number;
+  perfil: ItemLookup;
   email: string | null;
   telefone: string | null;
   cnh: string | null;
-  cnhValidade: string | null;
+  cnh_validade: string | null;
   ativo: boolean;
-  dataCriacao: string;
+  data_hora_criacao: string;
 }
 
 export interface ViagemResposta {
-  id: string;
+  id: number;
   origem: string;
   destino: string;
-  // GPS — coordenadas resolvidas no servidor (geocode da origem/destino)
-  origemLatitude: number | null;
-  origemLongitude: number | null;
-  destinoLatitude: number | null;
-  destinoLongitude: number | null;
-  // Cache da rota Mapbox Directions (geometria + distância real + duração)
-  rotaGeometria: unknown | null;
-  rotaDistanciaKm: number | null;
-  rotaDuracaoMin: number | null;
-  // Velocidade média histórica do motorista (km/h, 40 se sem amostras)
-  velocidadeMediaKmH: number | null;
-  dataViagem: string;
-  horaInicioPrevista: string;
-  horaFimPrevista: string;
-  dataHoraInicioReal: string | null;
-  dataHoraFimReal: string | null;
-  odometroInicial: number | null;
-  odometroFinal: number | null;
-  distanciaPercorrida: number | null;
-  motoristaId: string;
-  veiculoId: string;
-  operadorCriadorId: string;
-  solicitadoPor: string;
-  autorizadoPor: string;
+  origem_latitude: number | null;
+  origem_longitude: number | null;
+  destino_latitude: number | null;
+  destino_longitude: number | null;
+  rota_geometria: unknown | null;
+  rota_distancia_km: number | null;
+  rota_duracao_min: number | null;
+  velocidade_media_km_h: number | null;
+  data_viagem: string;
+  hora_inicio_prevista: string;
+  hora_fim_prevista: string;
+  data_hora_inicio_real: string | null;
+  data_hora_fim_real: string | null;
+  odometro_inicial: number | null;
+  odometro_final: number | null;
+  distancia_percorrida: number | null;
+  motorista_id: number;
+  veiculo_id: number;
+  operador_criador_id: number;
+  solicitado_por: string;
+  autorizado_por: string;
   observacoes: string | null;
-  status: StatusViagem;
-  dataCriacao: string;
+  status_id: number;
+  data_hora_criacao: string;
 }
 
 export interface ViagemDetalhada extends ViagemResposta {
   motorista: {
-    id: string;
+    id: number;
     nome: string;
     matricula: string;
   };
   veiculo: {
-    id: string;
+    id: number;
     placa: string;
     marca: string;
     modelo: string;
-    odometroAtual: number;
+    odometro_atual: number;
   };
+  status: ItemLookup;
 }
 
-export type TipoCombustivel = 'gasolina' | 'etanol' | 'diesel' | 'gnv' | 'flex';
-
 export interface CriarAbastecimento {
+  tipo_combustivel_id: number;
   valor: number;
   litros: number;
-  precoLitro: number;
-  tipoCombustivel: TipoCombustivel;
+  preco_litro: number;
   odometro?: number;
   data?: string;
   descricao?: string;
@@ -99,22 +106,23 @@ export interface CriarAbastecimento {
 }
 
 export interface VeiculoResumo {
-  id: string;
+  id: number;
   placa: string;
   marca: string;
   modelo: string;
 }
 
 export interface AbastecimentoResposta {
-  id: string;
-  veiculoId: string;
-  tipo: string;
+  id: number;
+  veiculo_id: number;
+  tipo_combustivel_id: number;
+  tipo_combustivel: ItemLookup;
   data: string;
   valor: number;
   litros: number;
-  precoLitro: number;
-  tipoCombustivel: string;
+  preco_litro: number;
   odometro: number | null;
   descricao: string;
-  dataCriacao: string;
+  observacoes: string | null;
+  data_hora_criacao: string;
 }
