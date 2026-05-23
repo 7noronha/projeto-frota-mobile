@@ -21,17 +21,18 @@ import {
 } from '@/components/ui/form-control';
 import { fetchApi, ErroApi } from '@/lib/api';
 import { useNotificar } from '@/lib/notificar';
-import type { CriarAbastecimento, TipoCombustivel, VeiculoResumo } from '@/tipos';
+import type { CriarAbastecimento, ItemLookup, VeiculoResumo } from '@/tipos';
 
-// IDs correspondem aos seed lookups tipos_combustivel (ver seed.ts).
-// Em produção real, isso deve vir de GET /lookups/tipos_combustivel.
-const COMBUSTIVEIS: { id: number; valor: TipoCombustivel; rotulo: string }[] = [
-  { id: 1, valor: 'gasolina', rotulo: 'Gasolina' },
-  { id: 2, valor: 'etanol', rotulo: 'Etanol' },
-  { id: 3, valor: 'diesel', rotulo: 'Diesel' },
-  { id: 4, valor: 'gnv', rotulo: 'GNV' },
-  { id: 5, valor: 'flex', rotulo: 'Flex' },
-];
+function rotuloCombustivel(nome: string): string {
+  const map: Record<string, string> = {
+    gasolina: 'Gasolina',
+    etanol: 'Etanol',
+    diesel: 'Diesel',
+    gnv: 'GNV',
+    flex: 'Flex',
+  };
+  return map[nome] ?? nome;
+}
 
 // Aceita vírgula (pt-BR) ou ponto
 function paraNumero(v: string): number {
@@ -51,6 +52,12 @@ export default function TelaAbastecimento() {
   } = useQuery({
     queryKey: ['veiculos-meus'],
     queryFn: () => fetchApi<VeiculoResumo[]>('/veiculos/meus'),
+  });
+
+  const { data: combustiveis } = useQuery({
+    queryKey: ['lookups', 'tipos_combustivel'],
+    queryFn: () => fetchApi<ItemLookup[]>('/lookups/tipos_combustivel'),
+    staleTime: 1000 * 60 * 60, // 1h
   });
 
   const [veiculoId, setVeiculoId] = useState<number | null>(null);
@@ -282,11 +289,11 @@ export default function TelaAbastecimento() {
             </FormControlLabelText>
           </FormControlLabel>
           <HStack style={{ gap: 8, flexWrap: 'wrap' }}>
-            {COMBUSTIVEIS.map((c) => {
+            {(combustiveis ?? []).map((c) => {
               const ativo = combustivel === c.id;
               return (
                 <Pressable
-                  key={c.valor}
+                  key={c.id}
                   onPress={() => {
                     setCombustivel(c.id);
                     setErro(null);
@@ -304,7 +311,7 @@ export default function TelaAbastecimento() {
                     size="sm"
                     style={{ color: ativo ? '#FFFFFF' : '#334155', fontWeight: '600' }}
                   >
-                    {c.rotulo}
+                    {rotuloCombustivel(c.nome)}
                   </Text>
                 </Pressable>
               );
