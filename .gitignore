@@ -42,3 +42,6 @@ yarn-error.*
 
 # IP da rede muda por maquina — nao versionar o .env real
 /.env
+
+# backup dos assets default do Expo (gerados localmente, nao versionar)
+assets/_default_backup/

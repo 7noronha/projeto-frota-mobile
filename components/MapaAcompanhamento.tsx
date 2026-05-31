@@ -1,160 +1,109 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
+import { useMemo } from 'react';
+import { ActivityIndicator, Image, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Text } from '@/components/ui/text';
+import type { PontoGeo } from '@/lib/distancia';
+import { montarUrlMapaEstatico, temTokenMapbox } from '@/lib/mapbox';
 import type { StatusLocalizacao } from '@/lib/useLocalizacaoAtual';
 
 interface MapaAcompanhamentoProps {
-  origem_latitude: number | null;
-  origem_longitude: number | null;
-  destino_latitude: number | null;
-  destino_longitude: number | null;
-  /** Posição atual do motorista (hoisted) — null se GPS inativo/indisponível. */
+  /** Coordenadas já resolvidas (da API ou geocodificadas no app). */
+  origemCoord: PontoGeo | null;
+  destinoCoord: PontoGeo | null;
+  /** GeoJSON LineString da rota (vinda da API), opcional. */
+  rota_geometria?: unknown | null;
+  /** Posição atual do motorista (GPS local) — null se inativo/indisponível. */
   posicaoMotorista: { latitude: number; longitude: number; precisao: number | null } | null;
-  /** Estado da permissão/GPS do motorista (para aviso visual). */
   statusGps?: StatusLocalizacao;
-  /** Quando true, mostra o aviso amarelo se status != 'ok'. */
   mostrarAvisoGps?: boolean;
   altura?: number;
 }
 
-interface Ponto {
-  latitude: number;
-  longitude: number;
-}
-
-function regiaoEnquadrandoPontos(pontos: Ponto[]): Region {
-  if (pontos.length === 0) {
-    return { latitude: -15.7942, longitude: -47.8822, latitudeDelta: 30, longitudeDelta: 30 };
-  }
-  const lats = pontos.map((p) => p.latitude);
-  const lngs = pontos.map((p) => p.longitude);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const padding = 1.4;
-  const latitudeDelta = Math.max((maxLat - minLat) * padding, 0.01);
-  const longitudeDelta = Math.max((maxLng - minLng) * padding, 0.01);
-  return {
-    latitude: (minLat + maxLat) / 2,
-    longitude: (minLng + maxLng) / 2,
-    latitudeDelta,
-    longitudeDelta,
-  };
-}
-
 /**
- * Mapa do acompanhamento da viagem.
- * - Marcador verde: origem (sede)
- * - Marcador azul: destino
- * - Marcador laranja: posição atual do motorista (em memória, GPS local)
- *
- * Auto-enquadra origem + destino na carga inicial. A posição atual é só
- * exibida — não é persistida em lugar nenhum.
+ * Mapa de acompanhamento da viagem — renderiza uma imagem do Mapbox Static
+ * Images API (sem SDK nativo). Marcadores: origem (verde), destino (azul) e
+ * posição do motorista (laranja). Auto-enquadra todos os pontos.
  */
 export function MapaAcompanhamento({
-  origem_latitude,
-  origem_longitude,
-  destino_latitude,
-  destino_longitude,
+  origemCoord,
+  destinoCoord,
+  rota_geometria,
   posicaoMotorista,
   statusGps,
   mostrarAvisoGps = false,
   altura = 260,
 }: MapaAcompanhamentoProps) {
-  const mapRef = useRef<MapView>(null);
+  const { width } = useWindowDimensions();
 
-  const origem = useMemo<Ponto | null>(
+  const motorista = posicaoMotorista
+    ? { latitude: posicaoMotorista.latitude, longitude: posicaoMotorista.longitude }
+    : null;
+
+  const url = useMemo(
     () =>
-      origem_latitude != null && origem_longitude != null
-        ? { latitude: origem_latitude, longitude: origem_longitude }
-        : null,
-    [origem_latitude, origem_longitude],
-  );
-  const destino = useMemo<Ponto | null>(
-    () =>
-      destino_latitude != null && destino_longitude != null
-        ? { latitude: destino_latitude, longitude: destino_longitude }
-        : null,
-    [destino_latitude, destino_longitude],
+      montarUrlMapaEstatico({
+        origem: origemCoord,
+        destino: destinoCoord,
+        motorista,
+        rotaGeoJson: rota_geometria,
+        largura: width - 32,
+        altura,
+      }),
+    [origemCoord, destinoCoord, motorista, rota_geometria, width, altura],
   );
 
-  const minha = posicaoMotorista;
-  const status = statusGps;
-
-  const regiaoInicial = useMemo(() => {
-    const pontos: Ponto[] = [];
-    if (origem) pontos.push(origem);
-    if (destino) pontos.push(destino);
-    return regiaoEnquadrandoPontos(pontos);
-  }, [origem, destino]);
-
-  // Quando o motorista vira visível pela primeira vez, reenquadra incluindo ele.
-  useEffect(() => {
-    if (!mapRef.current || !minha) return;
-    const pontos: Ponto[] = [{ latitude: minha.latitude, longitude: minha.longitude }];
-    if (origem) pontos.push(origem);
-    if (destino) pontos.push(destino);
-    mapRef.current.animateToRegion(regiaoEnquadrandoPontos(pontos), 600);
-  }, [minha, origem, destino]);
-
-  if (!origem && !destino) {
-    return null;
-  }
+  // Sem token configurado: não renderiza o mapa (a distância em texto continua
+  // sendo exibida pelo InfoDistancia).
+  if (!temTokenMapbox()) return null;
 
   return (
-    <View style={[styles.container, { height: altura }]}>
-      <MapView
-        ref={mapRef}
-        style={StyleSheet.absoluteFillObject}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        initialRegion={regiaoInicial}
-        showsUserLocation={false}
-        showsCompass
-        toolbarEnabled={false}
-      >
-        {origem && (
-          <Marker
-            coordinate={origem}
-            title="Origem"
-            description="Saída"
-            pinColor="#16A34A"
+    <View>
+      <View style={[styles.container, { height: altura }]}>
+        {url ? (
+          <Image
+            source={{ uri: url }}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+            accessibilityLabel="Mapa da rota da viagem"
           />
+        ) : (
+          <View style={styles.carregando}>
+            <ActivityIndicator color="#0066FF" />
+            <Text size="xs" style={styles.carregandoTexto}>
+              Carregando mapa…
+            </Text>
+          </View>
         )}
-        {destino && (
-          <Marker
-            coordinate={destino}
-            title="Destino"
-            description="Chegada"
-            pinColor="#0066FF"
-          />
-        )}
-        {minha && (
-          <Marker
-            coordinate={{ latitude: minha.latitude, longitude: minha.longitude }}
-            title="Você está aqui"
-            description={
-              minha.precisao != null
-                ? `Precisão: ${Math.round(minha.precisao)} m`
-                : undefined
-            }
-            pinColor="#F97316"
-          />
-        )}
-      </MapView>
 
-      {mostrarAvisoGps && status && status !== 'ok' && (
-        <View style={styles.aviso}>
-          <Text size="xs" style={styles.avisoTexto}>
-            {status === 'sem-permissao'
-              ? 'Permita o acesso ao GPS para ver sua posição no mapa.'
-              : status === 'indisponivel'
-                ? 'GPS indisponível. Verifique se a localização está ligada.'
-                : 'Obtendo sua localização…'}
-          </Text>
-        </View>
-      )}
+        {mostrarAvisoGps && statusGps && statusGps !== 'ok' && (
+          <View style={styles.aviso}>
+            <Text size="xs" style={styles.avisoTexto}>
+              {statusGps === 'sem-permissao'
+                ? 'Permita o acesso ao GPS para ver sua posição no mapa.'
+                : statusGps === 'indisponivel'
+                  ? 'GPS indisponível. Verifique se a localização está ligada.'
+                  : 'Obtendo sua localização…'}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Legenda dos marcadores */}
+      <View style={styles.legenda}>
+        <Legenda cor="#16A34A" rotulo="Origem" />
+        <Legenda cor="#0066FF" rotulo="Destino" />
+        {motorista && <Legenda cor="#F97316" rotulo="Você" />}
+      </View>
+    </View>
+  );
+}
+
+function Legenda({ cor, rotulo }: { cor: string; rotulo: string }) {
+  return (
+    <View style={styles.legendaItem}>
+      <View style={[styles.legendaBolinha, { backgroundColor: cor }]} />
+      <Text size="xs" style={styles.legendaTexto}>
+        {rotulo}
+      </Text>
     </View>
   );
 }
@@ -165,6 +114,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    backgroundColor: '#EEF2F7',
+  },
+  carregando: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  carregandoTexto: {
+    color: '#64748B',
   },
   aviso: {
     position: 'absolute',
@@ -178,5 +137,24 @@ const styles = StyleSheet.create({
   },
   avisoTexto: {
     color: '#FFFFFF',
+  },
+  legenda: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  legendaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendaBolinha: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendaTexto: {
+    color: '#64748B',
   },
 });

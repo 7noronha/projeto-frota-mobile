@@ -26,6 +26,7 @@ import { DetalheViagemSkeleton } from '@/components/DetalheViagemSkeleton';
 import { MapaAcompanhamento } from '@/components/MapaAcompanhamento';
 import { InfoDistancia } from '@/components/InfoDistancia';
 import { useLocalizacaoAtual } from '@/lib/useLocalizacaoAtual';
+import { useEnderecoCoord } from '@/lib/useEnderecoCoord';
 import { useEnviarPosicao } from '@/lib/useEnviarPosicao';
 import type { ViagemDetalhada, StatusViagem } from '@/tipos';
 
@@ -287,6 +288,18 @@ export default function TelaDetalheViagem() {
     ativo: gpsAtivo,
   });
 
+  // Coordenadas de origem/destino: usa as da API ou geocodifica o endereço.
+  const origemCoord = useEnderecoCoord(
+    viagem?.origem ?? null,
+    viagem?.origem_latitude ?? null,
+    viagem?.origem_longitude ?? null,
+  );
+  const destinoCoord = useEnderecoCoord(
+    viagem?.destino ?? null,
+    viagem?.destino_latitude ?? null,
+    viagem?.destino_longitude ?? null,
+  );
+
   if (isLoading) {
     return (
       <SafeAreaView
@@ -373,14 +386,14 @@ export default function TelaDetalheViagem() {
 
         <Divider />
 
-        {/* Mapa de acompanhamento — só mostra se há coordenadas; GPS do
-            motorista é ativado apenas em viagens EM_ANDAMENTO */}
-        {(viagem.origem_latitude != null || viagem.destino_latitude != null) && (
+        {/* Mapa de acompanhamento (Mapbox Static Images). Mostra sempre que há
+            endereço — o app geocodifica caso a API não tenha as coordenadas.
+            GPS do motorista é ativado apenas em viagens EM_ANDAMENTO. */}
+        {(origemCoord || destinoCoord) && (
           <MapaAcompanhamento
-            origem_latitude={viagem.origem_latitude}
-            origem_longitude={viagem.origem_longitude}
-            destino_latitude={viagem.destino_latitude}
-            destino_longitude={viagem.destino_longitude}
+            origemCoord={origemCoord}
+            destinoCoord={destinoCoord}
+            rota_geometria={viagem.rota_geometria}
             posicaoMotorista={
               minhaPosicao
                 ? {
@@ -403,16 +416,8 @@ export default function TelaDetalheViagem() {
               ? { latitude: minhaPosicao.latitude, longitude: minhaPosicao.longitude }
               : null
           }
-          origem={
-            viagem.origem_latitude != null && viagem.origem_longitude != null
-              ? { latitude: viagem.origem_latitude, longitude: viagem.origem_longitude }
-              : null
-          }
-          destino={
-            viagem.destino_latitude != null && viagem.destino_longitude != null
-              ? { latitude: viagem.destino_latitude, longitude: viagem.destino_longitude }
-              : null
-          }
+          origem={origemCoord}
+          destino={destinoCoord}
           inicioReal={viagem.data_hora_inicio_real}
           rota_distancia_km={viagem.rota_distancia_km}
           velocidade_media_km_h={viagem.velocidade_media_km_h}
